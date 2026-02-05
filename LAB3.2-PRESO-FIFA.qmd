@@ -1,0 +1,202 @@
+---
+title: "LAB: 3.2 FIFA Player Analysis - Improved Chart"
+subtitle: "Penalties vs Wage by Preferred Foot"
+author: "Neskarly Marin"
+format:
+  revealjs:
+    embed-resources: true
+    theme: white
+    css: styles.css
+    slide-number: true
+    transition: fade
+    center: true
+execute:
+  echo: false
+  warning: false
+  message: false
+knitr:
+  opts_chunk:
+    dev: "svg"
+---
+
+```{r}
+# Load packages
+library(datasetsICR)
+library(tidyverse)
+
+data(package = "datasetsICR")
+
+# Load FIFA dataset
+data(FIFA)
+
+# Filter for Manchester United only
+df <- FIFA %>%
+  filter(Club == "Manchester United")
+
+# Convert Wage to numeric
+df <- df %>%
+  mutate(
+    Wage = as.numeric(gsub("[^0-9]", "", Wage))
+  )
+```
+
+
+## Final Visualization & Insights
+
+## Final Chart (Original)
+
+```{r, old_final_build, include: false}
+old_final_plot <- ggplot(df, aes(x = Penalties, y = Wage, color = Preferred.Foot)) +
+  geom_point(alpha = 0.8, size = 2.3) +
+  labs(
+    x = "Penalties Rating",
+    y = "Weekly Wage (€ thousands)",
+    title = "Penalty Skill vs Wage at Manchester United",
+    subtitle = "Higher wages generally appear among players with stronger penalty ratings, mostly right-footed",
+    color = "Preferred Foot",
+    caption = "Source: datasetsICR — FIFA dataset"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    legend.position = "right"
+  )
+
+```
+
+```{r}
+old_final_plot
+```
+## Peer Feedback
+
+#### Strengths 
+::: {.smaller}
+- Clearly displays the relationship between penalty ratings and wages.
+- Uses color to distinguish players by preferred foot and includes labeled axes, a title, and a legend.
+:::
+
+#### Limitations 
+::: {.smaller}
+- The main relationship between penalties and wages was not immediately clear without a guiding visual cue.
+- All points were treated equally, making it hard to identify key players or outliers.
+:::
+
+## Final Chart (Improved)
+
+```{r final_improved, echo: false, fig-width: 13, fig-height: 7.5, message: false}
+library(ggrepel)
+
+name_col <- intersect(c("Name", "ShortName", "Player", "player"), names(df))[1]
+
+top_earners <- df |>
+  dplyr::arrange(dplyr::desc(Wage)) |>
+  dplyr::slice(1:3)
+
+final_plot_improved <- ggplot(df, aes(x = Penalties, y = Wage, color = Preferred.Foot)) +
+  geom_point(alpha = 0.85, size = 2.6) +
+
+  geom_smooth(
+    aes(group = 1),
+    method = "lm",
+    se = FALSE,
+    linewidth = 0.8,
+    alpha = 0.8,
+    color = "gray40"
+  ) +
+
+  geom_point(
+    data = top_earners,
+    aes(x = Penalties, y = Wage),
+    inherit.aes = FALSE,
+    shape = 21,
+    fill = "#E3B23C",
+    color = "black",
+    size = 3.8,
+    stroke = 0.6
+  ) +
+
+  geom_text_repel(
+    data = top_earners,
+    aes(x = Penalties, y = Wage, label = .data[[name_col]]),
+    inherit.aes = FALSE,
+    size = 4,
+    color = "gray20",
+    box.padding = 0.5,
+    point.padding = 0.3,
+    min.segment.length = 0,
+    segment.color = "gray65",
+    max.overlaps = Inf
+  ) +
+
+  scale_y_continuous(labels = scales::label_number(suffix = "K")) +
+
+  labs(
+    x = "Penalties Rating",
+    y = "Weekly Wage (€ thousands)",
+    title = "Penalty Skill vs Wage at Manchester United",
+    subtitle = "Higher wages generally appear among players with stronger penalty ratings, mostly right-footed",
+    color = "Preferred Foot",
+    caption = "Source: datasetsICR — FIFA dataset)"
+  ) +
+
+  coord_cartesian(clip = "off") +
+
+  theme_minimal(base_size = 16) +
+  theme(
+    plot.title = element_text(face = "bold", size = 18),
+    plot.subtitle = element_text(size = 13, color = "gray25"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = "right",
+    legend.title = element_text(face = "bold"),
+    plot.margin = margin(10, 30, 10, 10) 
+  )
+
+```
+
+```{r}
+final_plot_improved
+```
+
+## Improvements made 
+::: {.smaller}
+- Added a **trend line** to clearly communicate the overall positive association between penalty skill and wages.
+- **Highlighted the highest-paid players** to draw attention to influential observations and used labels.
+:::
+
+#### Takeaway
+::: {.smaller}
+Peer feedback helped transform the chart from a basic exploratory plot into a clearer, more communicative visualization that better highlights key patterns and players.
+:::
+
+## Supporting Table
+
+```{r supporting_table, echo: false}
+df %>%
+  group_by(Preferred.Foot) %>%
+  summarise(
+    players = n(),
+    avg_penalties = round(mean(Penalties, na.rm = TRUE), 1),
+    avg_wage = round(mean(Wage, na.rm = TRUE), 1),
+    .groups = "drop"
+  )
+```
+
+- Right-footed players make up the majority of the squad and account for most of the wage variation.
+- Average wages differ by preferred foot, supporting the visual pattern seen in the scatterplot.
+
+## Insights
+
+::: {.smaller}
+- Players with <span style="color:#1f77b4;"><strong>higher penalty ratings</strong></span> tend to earn <strong>higher wages</strong>, as shown by the upward trend in the data.
+- <span style="color:#2ca02c;"><strong>Right-footed players</strong></span> dominate the squad and account for most of the wage dispersion.
+- <span style="color:#d62728;"><strong>Left-footed players</strong></span> are fewer, but several still appear among the higher wage levels, indicating that wage is not determined by footedness alone.
+:::
+
+## Insights (Continued)
+
+::: {.smaller}
+- The <strong>highest-paid players</strong> (highlighted) cluster at relatively strong penalty ratings, reinforcing the association between penalty skill and compensation.
+- Despite this pattern, the relationship is <em>not perfectly linear</em>, and the wide spread in wages suggests that additional factors play a significant role.
+:::
+

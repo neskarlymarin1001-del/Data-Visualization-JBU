@@ -1,0 +1,16 @@
+/* Light gray-blue background */
+.reveal {
+  background-color: #f2f6f9;
+}
+
+/* Slightly darker text for contrast */
+.reveal h1, 
+.reveal h2, 
+.reveal h3 {
+  color: #1f2d3d;
+}
+
+.reveal p,
+.reveal li {
+  color: #2f3e4e;
+}

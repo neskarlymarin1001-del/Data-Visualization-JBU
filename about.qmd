@@ -1,0 +1,14 @@
+---
+title: "LAB 3: FIFA PLAYER ANALYSIS"
+author: "Neskarly Marin" 
+---
+
+## About this Site
+
+This site presents my work for **LAB 3.1 and LAB 3.2** for the Data Visualization course at John Brown University, which focus on exploratory data visualization using the **FIFA dataset** from the `datasetsICR` package.
+
+In **LAB 3.1**, I analyze the relationship between **penalty ratings** and **weekly wages** for players at **Manchester United**, using **Preferred Foot** as a categorical variable. The lab includes data preparation, summary statistics, categorical tables, and multiple chart versions leading to a final visualization that meets all required design elements.
+
+In **LAB 3.2**, I incorporate **peer feedback** to revise and improve the original visualization. This section presents a **before-and-after comparison**, highlighting how design choices such as trend lines, selective labeling, and improved visual hierarchy enhance interpretability and communication.
+
+Together, these labs demonstrate the process of moving from an initial exploratory chart to a more polished and effective data visualization.

@@ -1,0 +1,206 @@
+---
+title: "LAB: 3.1 FIFA Player Analysis"
+subtitle: "Penalties vs Wage by Preferred Foot"
+author: "Neskarly Marin"
+format:
+  revealjs:
+    embed-resources: true
+    theme: white
+    css: styles.css
+    slide-number: true
+    transition: fade
+    center: true
+execute:
+  echo: false
+  warning: false
+  message: false
+knitr:
+  opts_chunk:
+    dev: "svg"
+---
+
+```{r}
+# Load packages
+library(datasetsICR)
+library(tidyverse)
+
+data(package = "datasetsICR")
+
+# Load FIFA dataset
+data(FIFA)
+
+# Filter for Manchester United only
+df <- FIFA %>%
+  filter(Club == "Manchester United")
+
+# Convert Wage to numeric
+df <- df %>%
+  mutate(
+    Wage = as.numeric(gsub("[^0-9]", "", Wage))
+  )
+```
+
+## Dataset Overview
+
+## First 10 Rows
+
+```{r}
+head(df, 10)
+```
+
+## Last 10 Rows
+
+```{r}
+tail(df, 10)
+```
+
+## Structure of Dataset
+
+```{r}
+str(df)
+```
+
+## Summary Statistics: Penalties (X) and Wage (Y)
+
+```{r}
+df %>%
+  select(Penalties, Wage) %>%
+  summary()
+```
+
+## Numeric Summary (Clean Stats)
+
+```{r}
+df %>%
+  summarise(
+    players = n(),
+    penalties_mean = mean(Penalties, na.rm = TRUE),
+    penalties_sd   = sd(Penalties, na.rm = TRUE),
+    penalties_min  = min(Penalties, na.rm = TRUE),
+    penalties_max  = max(Penalties, na.rm = TRUE),
+    wage_mean      = mean(Wage, na.rm = TRUE),
+    wage_sd        = sd(Wage, na.rm = TRUE),
+    wage_min       = min(Wage, na.rm = TRUE),
+    wage_max       = max(Wage, na.rm = TRUE)
+  )
+```
+
+## Categorical Variable
+
+### Table: Preferred.Foot
+
+```{r}
+table(df$Preferred.Foot)
+```
+
+### Proportions
+
+```{r}
+prop.table(table(df$Preferred.Foot))
+```
+
+## Exploratory Analysis
+
+## Chart Version 1: Scatterplot (Colored by Preferred Foot)
+
+```{r p1_scatter, echo: false}
+p1 <- ggplot(df, aes(x = Penalties, y = Wage, color = Preferred.Foot)) +
+  geom_point(alpha = 0.7, size = 2) +
+  labs(
+    x = "Penalties Rating",
+    y = "Weekly Wage (€ thousands)",
+    title = "Penalties vs Wage",
+    subtitle = "Manchester United players colored by preferred foot",
+    color = "Preferred Foot",
+    caption = "Source: datasetsICR — FIFA dataset (Manchester United only; wage cleaned)"
+  ) +
+  theme_minimal(base_size = 14)
+```
+
+```{r}
+p1
+```
+
+## Chart Version 2: Scatter + Trend Lines
+
+```{r chart_2, echo: false}
+p2 <- ggplot(df, aes(x = Penalties, y = Wage, color = Preferred.Foot)) +
+  geom_point(alpha = 0.6, size = 2) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    x = "Penalties Rating",
+    y = "Weekly Wage (€ thousands)",
+    title = "Penalties vs Wage with Trend Lines",
+    subtitle = "Trend differs slightly by preferred foot",
+    color = "Preferred Foot",
+    caption = "Source: datasetsICR — FIFA dataset (filtered to Manchester United)"
+  ) +
+  theme_minimal(base_size = 14)
+
+p2
+```
+
+## Chart Version 3: Faceted Scatter
+
+```{r chart_3, echo: false}
+p3 <- ggplot(df, aes(x = Penalties, y = Wage)) +
+  geom_point(alpha = 0.7, size = 2) +
+  facet_wrap(~ Preferred.Foot) +
+  labs(
+    x = "Penalties Rating",
+    y = "Weekly Wage (€ thousands)",
+    title = "Penalties vs Wage by Preferred Foot",
+    subtitle = "Faceted view makes group differences easier to compare",
+    caption = "Source: datasetsICR — FIFA dataset (filtered to Manchester United)"
+  ) +
+  theme_minimal(base_size = 14)
+
+p3
+```
+
+## Final Visualization & Insights
+
+## Final Chart
+
+```{r final_chart, echo: false}
+final_plot <- ggplot(df, aes(x = Penalties, y = Wage, color = Preferred.Foot)) +
+  geom_point(alpha = 0.8, size = 2.3) +
+  labs(
+    x = "Penalties Rating",
+    y = "Weekly Wage (€ thousands)",
+    title = "Penalty Skill vs Wage at Manchester United",
+    subtitle = "Higher wages generally appear among players with stronger penalty ratings, mostly right-footed",
+    color = "Preferred Foot",
+    caption = "Source: datasetsICR — FIFA dataset (Manchester United only; wage cleaned to numeric)"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    legend.position = "right"
+  )
+
+final_plot
+```
+
+## Supporting Table
+
+```{r}
+df %>%
+  group_by(Preferred.Foot) %>%
+  summarise(
+    players = n(),
+    avg_penalties = mean(Penalties, na.rm = TRUE),
+    avg_wage = mean(Wage, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+## Insights
+
+::: smaller
+-   Players with [<strong>higher penalty ratings</strong>]{style="color:#1f77b4;"} generally earn <strong>higher wages</strong>.
+-   [<strong>Right-footed players</strong>]{style="color:#2ca02c;"} make up most of the squad and show the widest wage range.
+-   [<strong>Left-footed players</strong>]{style="color:#d62728;"} are fewer, but some still earn high wages.
+-   The relationship is <em>not perfectly linear</em>, but stronger penalty ability appears more often among higher-paid players.
+-   <strong>Wage variation</strong> is much larger than penalty variation, suggesting other factors matter.
+:::

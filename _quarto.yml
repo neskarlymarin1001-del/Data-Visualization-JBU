@@ -1,0 +1,27 @@
+project:
+  type: website
+
+website:
+  title: "Data Visualization Lab 3 - FIFA"
+  navbar:
+    left:
+      - href: about.qmd
+        text: ABOUT
+      - href: LAB3-1-NM.html
+        text: LAB3.1
+      - href: LAB3.2-PRESO-FIFA.html
+        text: LAB3.2
+
+format:
+  html:
+    theme:
+      - cosmo
+    css: styles.css
+    toc: true
+    code-fold: true
+    code-overflow: wrap
+
+execute: 
+  echo: false
+  warning: false
+
