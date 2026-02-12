@@ -1,0 +1,9 @@
+---
+title: "About This Project"
+---
+
+This project was developed for Data Visualization (DAT-4313-01) at John Brown University and includes both cross-sectional and time-series analyses.
+
+The Customer Retail presentation uses cross-sectional data to examine customer demographics, spending behavior, and marketing responsiveness. The visualizations apply principles such as using proportions appropriately, comparing distributions with scaled density plots, and addressing skewed data with logarithmic scaling.
+
+The Penn World Table presentation analyzes global economic trends from 1970–2019, comparing GDP per capita and human capital growth across countries. These charts demonstrate effective time-series techniques, including multi-line comparisons, faceting, and log scaling.
