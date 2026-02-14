@@ -83,6 +83,6 @@ This project demonstrates the ability to:
 ## 🌐 Project Output
 
 The final presentations are published via Netlify and rendered using Quarto RevealJS.
-- Access it here: https://lab4-1-show-the-right-numbers.netlify.app/about.html
+- Access it here: https://neskarly-marin-lab4dataviz.netlify.app/about.html
 
 ---
