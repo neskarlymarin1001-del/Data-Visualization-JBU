@@ -1,0 +1,366 @@
+---
+title: "LAB4.2: Customer Retail (Cross Sectional)"
+author: "Neskarly Marin"
+format:
+  revealjs:
+    embed-resources: true
+    theme: serif
+    slide-number: true
+    chalkboard: false
+    transition: fade
+    code-fold: true
+    code-line-numbers: false
+    center: false
+    width: 1200
+    height: 675
+    scrollable: true
+    code-overflow: wrap
+execute:
+  echo: true
+  warning: false
+  message: false
+knitr:
+  opts_chunk:
+    dev: "svg"
+---
+
+```{r}
+#| include: false
+
+library(tidyverse)
+library(scales)
+
+load("customer_retail.RData")
+theme_set(
+  theme_minimal(base_size = 16) +
+    theme(
+      plot.title = element_text(face = "bold"),
+      plot.subtitle = element_text(color = "gray30"),
+      panel.grid.minor = element_blank(),
+      legend.title = element_text(face = "bold"),
+      legend.position = "top"
+    )
+)
+
+pal_resp <- c("No" = "#9AA0A6", "Yes" = "#1A73E8")
+
+```
+
+## Chart 1 — Campaign responsiveness and family status
+### <span style="color:#1A73E8;">RQ: Are customers with kids at home less likely to respond to marketing campaigns?:</span>
+- *Chart choice:* Proportion stacked bar chart to compare response likelihood (distribution) within each group.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show code for Chart 1"
+#| eval: false
+
+customer_retail %>%
+  mutate(
+    KidsAtHome = if_else(KidsAtHome_binary == 1, "Kids at home", "No kids at home"),
+    Responsive = factor(Responsive, levels = c("No", "Yes"))
+  ) %>%
+  group_by(KidsAtHome) %>%
+  mutate(n_group = n()) %>%
+  ungroup() %>%
+  mutate(KidsAtHome_lbl = paste0(KidsAtHome, "\n(n=", n_group, ")")) %>%
+  ggplot(aes(x = KidsAtHome_lbl, fill = Responsive)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = percent_format()) +
+  scale_fill_manual(values = pal_resp) +
+  labs(
+    title = "Campaign Responsiveness by Presence of Kids at Home",
+    subtitle = "Proportions compare response likelihood; group sizes shown under labels.",
+    x = NULL,
+    y = "Share of customers",
+    fill = "Responded?"
+  )
+```
+
+
+## Chart 1 — Campaign responsiveness and family status
+::: {.columns}
+
+::: {.column width="68%"}
+
+```{r}
+#| echo: false
+#| fig-width: 9
+#| fig-height: 4.8
+
+customer_retail %>%
+  mutate(
+    KidsAtHome = if_else(KidsAtHome_binary == 1, "Kids at home", "No kids at home"),
+    Responsive = factor(Responsive, levels = c("No", "Yes"))
+  ) %>%
+  group_by(KidsAtHome) %>%
+  mutate(n_group = n()) %>%
+  ungroup() %>%
+  mutate(KidsAtHome_lbl = paste0(KidsAtHome, "\n(n=", n_group, ")")) %>%
+  ggplot(aes(x = KidsAtHome_lbl, fill = Responsive)) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = percent_format()) +
+  scale_fill_manual(values = pal_resp) +
+  labs(
+    title = "Campaign Responsiveness by Presence of Kids at Home",
+    subtitle = "Proportions compare response likelihood; group sizes shown under labels.",
+    x = NULL,
+    y = "Share of customers",
+    fill = "Responded?"
+  )
+```
+
+:::
+
+::: {.column width="32%"}
+
+<div style="font-size:0.65em; line-height:1.15; margin-top: 1.5em;">
+
+**Key Insights**
+
+- Customers without kids at home respond more frequently to campaigns.
+
+- Response rate is roughly ~30% vs ~20%.
+
+- Family responsibilities may reduce responsiveness to promotions.
+
+</div>
+:::
+:::
+
+## Chart 2 — Income differences by campaign responsiveness
+### <span style="color:#1A73E8;">RQ: Do customers who respond to campaigns have higher incomes?:</span>
+- *Chart choice:* Boxplot to compare the typical value (median) and spread of a continuous variable across categories; log scale for skew.
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show code for Chart 2"
+#| eval: false
+
+customer_retail %>%
+  mutate(Responsive = factor(Responsive, levels = c("No", "Yes"))) %>%
+  ggplot(aes(x = Responsive, y = Income, fill = Responsive)) +
+  geom_boxplot(outlier.alpha = 0.25, width = 0.55) +
+  scale_y_log10(labels = dollar_format()) +
+  labs(
+    title = "Income Differences by Campaign Responsiveness",
+    subtitle = "Using a log scale improves readability when income is right-skewed.",
+    x = NULL,
+    y = "Income (log scale)",
+    fill = "Responded?"
+  ) + 
+  theme(legend.position = "none") + 
+  scale_fill_manual(values = pal_resp)
+```
+
+## Chart 2 — Income differences by campaign responsiveness
+::: {.columns}
+
+::: {.column width="68%"}
+
+```{r}
+#| echo: false
+#| fig-width: 9
+#| fig-height: 4.8
+
+customer_retail %>%
+  mutate(Responsive = factor(Responsive, levels = c("No", "Yes"))) %>%
+  ggplot(aes(x = Responsive, y = Income, fill = Responsive)) +
+  geom_boxplot(outlier.alpha = 0.25, width = 0.55) +
+  scale_y_log10(labels = dollar_format()) +
+  labs(
+    title = "Income Differences by Campaign Responsiveness",
+    subtitle = "Using a log scale improves readability when income is right-skewed.",
+    x = NULL,
+    y = "Income (log scale)",
+    fill = "Responded?"
+  ) + 
+  theme(legend.position = "none") + 
+  scale_fill_manual(values = pal_resp)
+```
+
+:::
+
+::: {.column width="32%"}
+
+<div style="font-size:0.65em; line-height:1.15; margin-top: 1.5em;">
+
+**Key Insights**
+
+- Customers who respond to campaigns tend to have higher median incomes.
+
+- The entire income distribution for responders is shifted upward.
+
+- Income appears positively associated with campaign responsiveness.
+
+</div>
+:::
+:::
+
+## Chart 3 — Age patterns by responsiveness 
+### <span style="color:#1A73E8;">RQ: Do responders and non-responders have different age distributions?:</span>
+- *Chart choice:* Scaled density sets each group’s peak to 1, so shapes can be compared even if group sizes differ.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show code for Chart 3"
+#| eval: false
+
+customer_retail %>%
+  mutate(Responsive = factor(Responsive, levels = c("No", "Yes"))) %>%
+  ggplot(aes(x = Age, fill = Responsive, color = Responsive)) +
+  geom_density(alpha = 0.25, aes(y = ..scaled..)) +
+  labs(
+    title = "Age Distribution by Campaign Responsiveness",
+    subtitle = "Scaled density (peak = 1) compares distribution shapes independent of group size.",
+    x = "Age",
+    y = "Scaled density",
+    fill = "Responded?",
+    color = "Responded?"
+  ) + 
+  scale_fill_manual(values = pal_resp) +
+  scale_color_manual(values = pal_resp)
+
+```
+
+## Chart 3 — Age patterns by responsiveness 
+
+::: {.columns}
+
+::: {.column width="68%"}
+
+```{r}
+#| echo: false
+#| fig-width: 9
+#| fig-height: 4.8
+
+customer_retail %>%
+  mutate(Responsive = factor(Responsive, levels = c("No", "Yes"))) %>%
+  ggplot(aes(x = Age, fill = Responsive, color = Responsive)) +
+  geom_density(alpha = 0.25, aes(y = ..scaled..)) +
+  labs(
+    title = "Age Distribution by Campaign Responsiveness",
+    subtitle = "Scaled density (peak = 1) compares distribution shapes independent of group size.",
+    x = "Age",
+    y = "Scaled density",
+    fill = "Responded?",
+    color = "Responded?"
+  ) + 
+  scale_fill_manual(values = pal_resp) +
+  scale_color_manual(values = pal_resp)
+
+```
+
+:::
+
+::: {.column width="32%"}
+
+<div style="font-size:0.65em; line-height:1.15; margin-top: 1.5em;">
+
+**Key Insights**
+
+- The overall age profiles of responders and non-responders largely overlap.
+
+- Responders show slightly higher density in the 60–70 range.
+
+- Age alone does not appear to strongly differentiate campaign responsiveness.
+
+</div>
+:::
+:::
+
+## Chart 4 — Spending and income relationship
+### <span style="color:#1A73E8;">RQ: Do higher-income customers spend more overall?:</span>
+- *Chart choice:* Scatterplot to examine the relationship between two continuous variables; LOESS smooth for trend; log scale for skewed spending.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show code for Chart 4"
+#| eval: false
+
+customer_retail %>%
+  ggplot(aes(x = Income, y = TotalSpend)) +
+  geom_point(alpha = 0.25, color = "#9AA0A6", size = 1.2) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1.2, color = "#1A73E8") +
+  scale_x_log10(labels = dollar_format()) +
+  scale_y_log10(labels = dollar_format()) +
+  labs(
+    title = "Income and Total Spending",
+    subtitle = "Spending generally rises with income, but variability is substantial",
+    x = "Income (log scale)",
+    y = "Total spend (log scale)"
+  )
+
+
+```
+
+## Chart 4 — Spending and income relationship
+
+::: {.columns}
+
+::: {.column width="68%"}
+
+```{r}
+#| echo: false
+#| fig-width: 9
+#| fig-height: 4.8
+
+customer_retail %>%
+  ggplot(aes(x = Income, y = TotalSpend)) +
+  geom_point(alpha = 0.25, color = "#9AA0A6", size = 1.2) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1.2, color = "#1A73E8") +
+  scale_x_log10(labels = dollar_format()) +
+  scale_y_log10(labels = dollar_format()) +
+  labs(
+    title = "Income and Total Spending",
+    subtitle = "Spending generally rises with income, but variability is substantial",
+    x = "Income (log scale)",
+    y = "Total spend (log scale)"
+  )
+
+
+```
+
+:::
+
+::: {.column width="32%"}
+
+<div style="font-size:0.65em; line-height:1.15; margin-top: 1.5em;">
+
+**Key Insights**
+
+- Total spending increases as income rises, especially between $30k–$100k.
+
+- The relationship appears positive but nonlinear.
+
+- The decline at very high income levels likely reflects sparse observations rather than true diminishing spending behavior.
+
+</div>
+:::
+:::
+
+## Revision Summary — Improvements Based on Feedback
+
+::: {.columns}
+
+::: {.column width="60%"}
+
+
+### <span style="color:#1A73E8;">What I Improved:</span>
+
+- More precise interpretation of nonlinear relationships
+
+- Improved proportional comparisons and log scaling
+
+- Cleaner RevealJS layout with side-by-side insights
+
+:::
+
+::: {.column width="40%"}
+
+![](pedir-feedback.jpg){width=100%}
+
+:::
+
+:::

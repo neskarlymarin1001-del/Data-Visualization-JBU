@@ -1,0 +1,31 @@
+project:
+  type: website
+
+website:
+  title: "LAB4.2"
+  navbar:
+    left:
+      - href: about.qmd
+        text: ABOUT
+      - href: LAB4.1-customer_retail_crossSectional.qmd
+        text: LAB4.1 Customer Retail
+      - href: LAB4.1-pwt_data_timeSeries.qmd
+        text: LAB4.1 PWT
+      - href: LAB4.2-customer_retail_crossSectional.qmd
+        text: LAB4.2 Customer Retail
+      - href: LAB4.2-pwt_data_timeSeries.qmd
+        text: LAB4.2 PWT
+
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    toc-location: left
+    code-fold: true
+    code-overflow: wrap
+    
+execute: 
+  echo: true
+  warning: false
