@@ -1,0 +1,5 @@
+---
+title: "About"
+---
+
+This site was developed for **Data Visualization (DAT-4313-01)** at John Brown University. This website presents a data analysis of the Catholic_viz dataset, focusing on the academic performance of 12th-grade students. The primary objective of this study was to develop and refine a multiple linear regression model to identify the key predictors of student reading scores.

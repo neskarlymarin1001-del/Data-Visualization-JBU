@@ -1,0 +1,343 @@
+---
+title: "LAB6: Work with Models"
+author: "Neskarly Marin"
+format:
+  revealjs:
+    embed-resources: true
+    theme: solarized
+    slide-number: true
+    chalkboard: false
+    transition: fade
+    code-fold: true
+    code-line-numbers: false
+    center: false
+    width: 1200
+    height: 675
+    scrollable: true
+    code-overflow: wrap
+execute:
+  echo: true
+  warning: false
+  message: false
+knitr:
+  opts_chunk:
+    dev: "png"
+    fig-align: "center"
+---
+
+```{r}
+#| include: false
+library(tidyverse)
+library(ggplot2)
+library(DataExplorer)
+library(GGally)
+library(broom)
+library(margins)
+library(gglm)
+library(gridExtra)
+```
+
+```{r}
+#| include: false
+load("Catholic_viz.RData")
+
+str(Catholic_viz)
+summary(Catholic_viz)
+```
+
+# Remove ID Variable
+
+```{r}
+Catholic_viz <- Catholic_viz %>%
+  select(-id, -asian) 
+```
+
+The ID variable was removed because it does not contain predictive information and only serves as an identifier.
+
+# Convert Binary Variables to Factors
+
+```{r}
+Catholic_viz <- Catholic_viz %>%
+mutate(
+female = as.factor(female),
+hispan = as.factor(hispan),
+black = as.factor(black),
+hsgrad = as.factor(hsgrad),
+cathhs = as.factor(cathhs),
+parcath = as.factor(parcath)
+)
+```
+
+Binary variables were converted to factors to improve interpretability in visualizations and regression analysis.
+
+# Exploratory Data Analysis (EDA)
+
+## Dataset Overview
+
+```{r}
+plot_intro(Catholic_viz)
+```
+
+### Insights
+
+::: {style="font-size: 0.65em;"}
+The dataset contains 5,970 observations and multiple variables describing student academic performance, demographics, parental education, and family income.
+:::
+
+## Missing Values
+
+```{r}
+plot_missing(Catholic_viz)
+```
+
+### Insights
+
+::: {style="font-size: 0.65em;"}
+The missing value plot indicates that there are no missing values, suggesting that the dataset is suitable for regression analysis.
+:::
+
+## Nominal Variables
+
+::::: columns
+::: {.column width="75%"}
+```{r}
+plot_bar(Catholic_viz)
+```
+:::
+
+::: {.column width="25%" style="font-size: 0.65em; line-height: 1.4;"}
+### Insights
+
+-   Gender: Fairly balanced, with slightly more females.
+
+-   Demographics: The sample is predominantly non-Hispanic and non-Black.
+
+-   Education & Religion: Almost all are high school graduates. Few attended Catholic high schools, but a large portion have at least one Catholic parent.
+:::
+:::::
+
+## Distribution of Numeric Variables
+
+::::: columns
+::: {.column width="75%"}
+```{r}
+#| fig-width: 12
+#| fig-height: 8
+plot_histogram(Catholic_viz)
+```
+:::
+
+::: {.column width="25%" style="font-size: 0.65em; line-height: 1.4;"}
+### Insights
+
+-   **Test Scores:** Both are slightly left-skewed, with most scores peaking in the upper 50s.
+
+-   **Parental Education:** Shows discrete spikes at 12, 14, and 16 years, clearly aligning with major educational milestones (high school, college).
+
+-   **Family Income:** Normally distributed around 10.5. The values suggest it is already log-transformed, which is ideal for linear regression.
+:::
+:::::
+
+## Boxplots for numeric variables
+
+::::: columns
+::: {.column width="75%"}
+```{r}
+#| fig-width: 9
+#| fig-height: 4.5
+Catholic_viz$All <- "All"
+plot_boxplot(Catholic_viz, by = "All")
+Catholic_viz <- Catholic_viz %>% select(-All)
+```
+:::
+
+::: {.column width="25%" style="font-size: 0.65em; line-height: 1.4;"}
+### Insights
+
+-   **Test Scores:** Symmetric distributions with centered medians and no extreme outliers, which is ideal for regression modeling.
+
+-   **Parental Education:** Highly concentrated between 12 and 14 years, displaying a few distinct outliers at the extreme ends.
+
+-   **Family Income:** Tightly clustered around the median, though the plot clearly reveals a left tail of low-income outliers that were not as obvious in the histogram.
+:::
+:::::
+
+## Correlations
+
+::::: columns
+::: {.column width="75%"}
+```{r}
+#| fig-width: 9
+#| fig-height: 4.5
+plot_correlation(Catholic_viz, type="continuous")
+```
+:::
+
+::: {.column width="25%" style="font-size: 0.65em; line-height: 1.4;"}
+### Insights
+
+-   Math scores have a strong positive correlation (0.71) with reading scores.
+
+-   Father's education (0.32), family income (0.27), and mother's education (0.27) all have weak-to-moderate positive relationships with reading scores.
+
+-   **Multicollinearity Check:** Mother's and father's education are moderately correlated with each other (0.58). This is expected and is not high enough to cause major multicollinearity issues in your regression model.
+:::
+:::::
+
+## Scatterplot
+
+::::: columns
+::: {.column width="75%"}
+```{r}
+#| fig-width: 9
+#| fig-height: 4.5
+ggplot(Catholic_viz, aes(x = math12, y = read12)) +
+geom_point(alpha = 0.15) +
+geom_smooth(method = "lm", aes(color = "OLS")) +
+geom_smooth(method = "loess", aes(color = "LOESS")) +
+scale_color_manual(name = "Model", values = c("OLS"="red","LOESS"="blue")) +
+theme_minimal() +
+labs(
+title="Relationship Between Math and Reading Scores",
+x="Math Score (12th Grade)",
+y="Reading Score (12th Grade)"
+)
+```
+:::
+
+::: {.column width="25%" style="font-size: 0.65em; line-height: 1.4;"}
+### Insights
+
+-   There is a strong, positive relationship between math and reading scores. As math scores increase, reading scores reliably increase as well.
+
+-   The LOESS curve (blue) almost perfectly overlaps the OLS line (red). This confirms that the relationship is strictly linear.
+
+-   The points are fairly evenly distributed around the regression lines
+:::
+:::::
+
+# Modeling
+
+## Multiple Linear Regression
+
+```{r}
+model <- lm(read12 ~ math12 + fatheduc + lfaminc, data = Catholic_viz)
+
+summary(model)
+```
+
+### Insights
+
+::: {style="font-size: 0.65em;"}
+-   The final model explains 51% of the variance in reading scores.
+
+-   Math score is by far the strongest predictor. Holding everything else constant, for every 1-point increase in a student's math score, their reading score goes up by about 0.68 points.
+
+-   Father's education and family income are also significant predictors.
+:::
+
+## Predicted vs Actual
+
+```{r}
+plot_data <- augment(model)
+
+ggplot(plot_data, aes(x = .fitted, y = read12)) +
+geom_point(alpha = 0.3) +
+geom_abline(slope = 1, intercept = 0, color = "red") +
+theme_minimal() +
+labs(
+title="Predicted vs Actual Reading Scores",
+x="Predicted Reading Scores",
+y="Actual Reading Scores"
+)
+```
+
+### Insights
+
+::: {style="font-size: 0.65em;"}
+-   Points cluster consistently along the red reference line, confirming the model captures the overall trend accurately.
+:::
+
+## Residual Diagnostics
+
+::::: columns
+::: {.column width="75%"}
+```{r}
+#| fig-width: 9
+#| fig-height: 4.5
+gglm(model)
+```
+:::
+
+::: {.column width="25%" style="font-size: 0.65em; line-height: 1.4;"}
+### Insights
+
+-   The Normal Q-Q plot shows the data points closely following the diagonal line, confirming that the model's residuals are approximately normally distributed.
+
+-   The Residuals vs. Fitted and Scale-Location plots display a relatively random scatter of points with mostly flat trend lines.
+
+-   The Residual vs. Leverage plot reveals no extreme outliers with high leverage. This means no single data point is disproportionately skewing our model's results.
+:::
+:::::
+
+## Variable importance
+
+::::: columns
+::: {.column width="75%"}
+```{r}
+#| fig-width: 9
+#| fig-height: 4.5
+tidy(model) %>%
+filter(term != "(Intercept)") %>%
+ggplot(aes(x=reorder(term, estimate), y=estimate)) +
+geom_col() +
+coord_flip() +
+theme_minimal() +
+labs(
+title="Regression Coefficients for Reading Score Model",
+x="Predictor",
+y="Coefficient Estimate"
+)
+```
+:::
+
+::: {.column width="25%" style="font-size: 0.65em; line-height: 1.4;"}
+### Insights
+
+-   The coefficient for math scores is by far the largest, visually confirming it as the most dominant predictor of reading scores in the analysis.
+
+-   Family income and father's education display moderate positive coefficients, highlighting their secondary role in predicting reading performance.
+
+-   Mother's education and Catholic high school attendance show the smallest coefficient estimates, aligning with their lack of statistical significance.
+:::
+:::::
+
+## Marginal Effects
+
+::::: columns
+::: {.column width="75%"}
+```{r}
+#| fig-width: 9
+#| fig-height: 4.5
+marg <- margins(model)
+
+summary(marg)
+
+plot(marg)
+```
+:::
+
+::: {.column width="25%" style="font-size: 0.65em; line-height: 1.4;"}
+### Insights
+
+-   Because this is a standard linear model, the Average Marginal Effects (AME) perfectly mirror our regression coefficients. They confirm the expected, uniform change in reading scores for every one-unit increase in each predictor.
+:::
+:::::
+
+# Final Reflection
+
+::: {style="font-size: 0.75em;"}
+-   Once again, DataExplorer made the initial data checks incredibly efficient. Instead of guessing, I could immediately see the distributions and correlations, which guided my variable selection from the very beginning.
+-   A good model isn't about throwing every available variable at the wall to see what sticks. Reviewing the p-values and dropping the non-significant predictors taught me the value of building a clean model.
+-   Generating the Predicted vs. Actuals and gglm plots helped me actually see what an R-squared of 0.51 looks like in reality.
+:::
