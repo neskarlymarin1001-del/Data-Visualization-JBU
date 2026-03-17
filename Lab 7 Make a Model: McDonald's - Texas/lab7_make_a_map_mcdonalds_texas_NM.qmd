@@ -1,0 +1,364 @@
+---
+title: "LAB7 Make a Map: McDonald's in Texas"
+subtitle: "A Spatial Analysis of Population, Income & Fast Food"
+author: "Neskarly Marin"
+format:
+  revealjs:
+    embed-resources: true
+    theme: dark
+    transition: slide
+    slide-number: true
+    chalkboard: false
+    scrollable: true
+    self-contained: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Overview
+
+**Goal:** Visualize McDonald's restaurant locations in Texas in the context of county-level demographics.
+
+
+## Packages
+
+```{r}
+#| label: packages
+
+options(scipen = 999)
+
+library(tidyverse)
+library(leaflet)
+library(tidycensus)
+library(censusapi)
+library(tigris)
+library(sf)
+library(viridis)
+library(stringr)
+library(kableExtra)
+library(psych)
+```
+
+
+## Step 1: Retrieve Texas County Population from US Census {.smaller}
+
+We use `tidycensus::get_acs()` with `geometry = TRUE` to pull county-level population estimates directly from the American Community Survey (ACS).
+
+-   **Table B01003_001** = Total Population
+-   **State:** Texas (state = "TX")
+
+```{r}
+#| label: census-population
+
+options(tigris_use_cache = TRUE)
+unlink(tempdir(), recursive = TRUE)
+dir.create(tempdir())
+
+tx_pop <- get_acs(
+  geography = "county",
+  variables  = "B01003_001",
+  state      = "TX",
+  geometry   = TRUE,
+  progress_bar = FALSE
+)
+
+knitr::kable(head(tx_pop, 6))
+```
+
+------------------------------------------------------------------------
+
+## Step 2: Read & Clean McDonald's Location Data {.smaller}
+
+We load our McDonald's dataset downloaded from Kaggle. We filter for Texas only and keep the relevant columns: `name`, `city`, `state`, `latitude`, and `longitude`.
+
+```{r}
+#| label: load-mcdonalds
+
+mcd_all <- read.csv("mcdonalds_locations.csv", stringsAsFactors = FALSE)
+
+mcd_tx <- mcd_all %>%
+  filter(state == "TX") %>%
+  dplyr::select(store_id, name, address, city, state, zipcode, latitude, longitude) %>%
+  filter(!is.na(latitude), !is.na(longitude))
+
+cat("Number of McDonald's locations in Texas:", nrow(mcd_tx), "\n")
+
+knitr::kable(head(mcd_tx, 6))
+```
+
+
+## Step 2 (cont.): McDonald's Distribution Across Texas {.smaller}
+
+```{r}
+#| label: mcd-summary
+
+mcd_tx %>%
+  count(city, sort = TRUE) %>%
+  slice_head(n = 10) %>%
+  kable(col.names = c("City", "Number of Locations"),
+        caption = "Top 10 Texas Cities by McDonald's Count") %>%
+  kable_styling(bootstrap_options = c("striped", "condensed"),
+                font_size = 14,
+                full_width = FALSE)
+```
+
+
+## MAP 1: Design Choices {.smaller}
+
+**McDonald's overlaid on Texas County Population Choropleth**
+
+-   **Palette:** `viridis` (colorblind-friendly, perceptually uniform, darker = higher population)
+-   **Quantiles:** `n = 20` (percentiles) — reveals finer population gradations across 254 counties
+-   **Marker:** Red circle markers — McDonald's brand color, high contrast on viridis background
+-   **Tile:** `OpenStreetMap.Mapnik` — familiar road context helps interpret store placement
+-   **Popup:** County name on polygon click; store name on marker click
+
+```{r}
+#| label: map1-build
+#| echo: true
+
+MapPalette1 <- colorQuantile(palette = "viridis",
+                              domain = tx_pop$estimate,
+                              n = 20)
+
+map1 <- tx_pop %>%
+  st_transform(crs = "+proj=longlat +datum=WGS84") %>%
+  leaflet(width = "100%", height = 520) %>%
+  addProviderTiles(provider = "OpenStreetMap.Mapnik") %>%
+  addPolygons(
+    popup      = ~NAME,
+    stroke     = TRUE,
+    color      = "white",
+    weight     = 0.5,
+    smoothFactor = 0,
+    fillOpacity  = 0.7,
+    fillColor    = ~MapPalette1(estimate)
+  ) %>%
+  addLegend("bottomright",
+            pal    = MapPalette1,
+            values = ~estimate,
+            title  = "Population Percentiles",
+            opacity = 1) %>%
+  addCircleMarkers(
+    data    = mcd_tx,
+    lat     = ~latitude,
+    lng     = ~longitude,
+    popup   = ~name,
+    weight  = 1,
+    radius  = 4,
+    color   = "#DA291C",
+    fillColor = "#DA291C",
+    fillOpacity = 0.9,
+    opacity = 1
+  )
+```
+
+
+## MAP 1: McDonald's on Texas Population Choropleth
+
+```{r}
+#| label: map1-display
+#| echo: false
+map1
+```
+
+
+## Map 1 Insights {.smaller}
+
+1.  McDonald's locations are densely concentrated in the highest-population counties: Harris (Houston), Dallas, Bexar (San Antonio), and Tarrant (Fort Worth), all in the top population percentiles.
+
+2.  A visible spine of McDonald's locations runs along the I-35 corridor from Laredo through San Antonio, Austin, and Dallas, reflecting both population density and highway traffic demand.
+
+3.  The vast, low-population counties of West Texas have virtually no McDonald's locations, aligning with some of the lowest population percentiles on the map and the few that exist are located in strategic locations that connect multiple high ways. 
+
+4.  Cities like Lubbock, Amarillo, and El Paso have a disproportionately large cluster of McDonald's relative to surrounding counties, likely due to their role as regional commercial hubs.
+
+
+## Step 3: Retrieve Texas County Median Household Income {.smaller}
+
+For Map 2, we use **`censusapi`** to pull median HH income from the Census SAIPE tables (Small Area Income and Poverty Estimates, 2023). 
+
+```{r}
+#| label: census-income
+
+library(censusapi)
+
+vars <- c("NAME", "SAEMHI_PT")
+
+tx_income <- getCensus(
+  name     = "timeseries/poverty/saipe",
+  vars     = vars,
+  region   = "county:*",
+  regionin = "state:48",     
+  time     = 2023
+)
+
+knitr::kable(head(tx_income, 6))
+```
+
+
+## Step 3 (cont.): Income Descriptives {.smaller}
+
+```{r}
+#| label: income-descriptives
+
+psych::describe(tx_income$SAEMHI_PT, fast = TRUE)
+
+mincounty <- tx_income$NAME[which.min(tx_income$SAEMHI_PT)]
+maxcounty <- tx_income$NAME[which.max(tx_income$SAEMHI_PT)]
+
+cat("Lowest median income county: ", mincounty, "\n")
+cat("Highest median income county:", maxcounty, "\n")
+```
+
+The average household income across Texas counties is **\$63,467**, ranging from **\$36,695** (`r mincounty`) to **\$120,149** (`r maxcounty`). The distribution is right-skewed with several high-income outlier counties.
+
+
+## Step 3 (cont.): Income Distribution by County
+
+```{r}
+#| label: income-boxplot
+#| echo: false
+#| fig-width: 10
+#| fig-height: 4
+
+par(mar = c(5, 2, 4, 2))
+boxplot(tx_income$SAEMHI_PT,
+        horizontal = TRUE,
+        col        = "#FFC72C",
+        border     = "gray30",
+        main       = "Distribution of Median Household Income – Texas Counties",
+        xlab       = "Median HH Income ($)",
+        cex.main   = 1.4,
+        cex.lab    = 1.2,
+        cex.axis   = 1.1)
+```
+
+
+## Step 3 (cont.): Merge Income with County Geometry {.smaller}
+
+```{r}
+#| label: income-geometry
+
+library(tigris)
+
+tx_counties <- counties(state = "48", cb = TRUE, class = "sf") %>%
+  mutate(GEOID = as.character(GEOID))
+
+tx_income_map <- left_join(tx_income, tx_counties,
+                            by = c("county" = "COUNTYFP"))
+
+tx_income_map <- st_as_sf(tx_income_map)
+
+tx_income_map <- st_transform(tx_income_map, crs = 4326) %>%
+  rename(MedianIncome = SAEMHI_PT)
+
+cat("Rows in merged income map:", nrow(tx_income_map), "\n")
+```
+
+## MAP 2: Design Choices {.smaller}
+
+**McDonald's overlaid on Texas County Median Household Income Choropleth**
+
+-   **Fill variable:** Median household income (SAIPE) 
+-   **Palette:** `inferno`, brighter = higher income, dark purple = lower income
+-   **Quantiles:** `n = 10` (deciles) — cleaner breaks, easier legend to read
+-   **Marker:** Gold/yellow circle markers — McDonald's brand yellow, pops against dark inferno palette
+-   **Tile:** `Esri.WorldGrayCanvas` — neutral gray canvas removes distracting geography, keeps focus on income patterns
+-   **Popup:** Shows store name + adress for richer context
+
+```{r}
+#| label: map2-build
+#| echo: true
+
+MapPalette2 <- colorQuantile(palette = "inferno",
+                              domain = tx_income_map$MedianIncome,
+                              n = 10)
+
+mcd_popup <- paste0("<b>", mcd_tx$name, "</b><br/>",
+                    mcd_tx$city, ", TX<br/>",
+                    mcd_tx$address)
+
+map2 <- leaflet(data = tx_income_map, width = "100%", height = 520) %>%
+  addProviderTiles(provider = "Esri.WorldGrayCanvas") %>%
+  addPolygons(
+    popup        = ~NAME.x,
+    stroke       = TRUE,
+    color        = "gray40",
+    weight       = 0.8,
+    smoothFactor = 0,
+    fillOpacity  = 0.75,
+    fillColor    = ~MapPalette2(MedianIncome)
+  ) %>%
+  addLegend("bottomright",
+            pal     = MapPalette2,
+            values  = ~MedianIncome,
+            title   = "Median Income<br/>Deciles",
+            opacity = 1) %>%
+  addCircleMarkers(
+    data        = mcd_tx,
+    lat         = ~latitude,
+    lng         = ~longitude,
+    popup       = mcd_popup,
+    weight      = 1,
+    radius      = 5,
+    color       = "#FFC72C",
+    fillColor   = "#FFC72C",
+    fillOpacity = 1,
+    opacity     = 1
+  )
+```
+
+
+## MAP 2: McDonald's on Texas Median Income Choropleth
+
+```{r}
+#| label: map2-display
+#| echo: false
+map2
+```
+
+
+## Map 2 Insights {.smaller}
+
+1. Contrary to the perception that fast food targets low-income areas, most Texas McDonald's are in counties with median incomes in the 5th–9th decile, reflecting consumer spending power needed to sustain high-volume locations.
+
+2. The high-income suburban counties surrounding Houston and Dallas show clusters of McDonald's, suggesting the brand actively targets high-traffic, affluent suburban corridors.
+
+3. Many of the lowest-income counties in South Texas have very few McDonald's locations despite having measurable populations, possibly due to low projected sales volume.
+
+4. Switching to a neutral Esri gray background removes geographic noise and makes the income gradient far easier to read, highlighting the sharp income inequality between neighboring Texas counties.
+
+
+## Summary & Conclusions {.smaller}
+
+|   | Map 1 | Map 2 |
+|------------------------|------------------------|------------------------|
+| **Fill variable** | Population (ACS) | Median HH Income (SAIPE) |
+| **Palette** | viridis (percentiles, n=20) | inferno (deciles, n=10) |
+| **Marker color** | McDonald's red | McDonald's yellow |
+| **Map tile** | OpenStreetMap | Esri WorldGrayCanvas |
+| **Key insight** | Locations follow population | Locations cluster in mid-high income areas |
+
+**Overall takeaway:** McDonald's Texas expansion strategy aligns with both population density and purchasing power. The brand is notably absent from the most rural, lowest-income, and lowest-population counties, despite these areas often having the fewest food options overall.
+
+
+## Data Sources & References {.smaller}
+
+-   **McDonald's Locations:** Kaggle — *McDonalds Complete USA Locations 2025*\
+    URL: https://www.kaggle.com/datasets/jacopomazzoni/mcdonalds-locations-2025/
+
+-   **US Census Population:** American Community Survey (ACS), Table B01003_001\
+    Retrieved via `tidycensus` R package\
+    URL: https://www.census.gov/programs-surveys/acs
+
+-   **US Census Median HH Income:** SAIPE (Small Area Income and Poverty Estimates), 2023\
+    Retrieved via `censusapi` R package\
+    URL: https://www.census.gov/programs-surveys/saipe
+
+-   **County Geometry:** TIGER/Line Shapefiles via `tigris` R package\
+    URL: https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html
+
+-   **Map Tiles:** OpenStreetMap contributors; Esri WorldGrayCanvas

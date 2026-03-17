@@ -1,0 +1,22 @@
+project:
+  type: website
+
+website:
+  title: "LAB 7 Make a Map"
+  navbar:
+    left:
+      - href: about.qmd
+        text: About
+      - href: lab7_make_a_map_mcdonalds_texas_NM.qmd
+        text: Lab 7.1 McDonalds - Texas
+
+format:
+  html:
+    theme:
+      - cosmo
+      - brand
+    css: styles.css
+    toc: true
+
+editor: visual
+

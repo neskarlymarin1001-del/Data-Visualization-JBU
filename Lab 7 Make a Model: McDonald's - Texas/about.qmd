@@ -1,0 +1,9 @@
+---
+title: "About"
+---
+
+My name is Neskarly Marin, and I am a student at **John Brown University**. This project was completed as part of **DAT-4313: Data Visualization**, a course focused on developing the skills to communicate insights from complex datasets through effective and meaningful graphics.
+
+This analysis explores the geographic distribution of McDonald's locations across Texas using interactive choropleth maps built with R and the leaflet package. Through this work, I applied spatial data techniques including US Census data extraction, county-level population and income mapping, and location overlay visualization.
+
+I am particularly interested in how data visualization can reveal patterns that are not immediately obvious in raw data, and how thoughtful design choices in color, scale, and context can make those patterns accessible and meaningful to a broader audience.
